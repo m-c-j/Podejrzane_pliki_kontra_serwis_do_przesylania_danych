@@ -208,4 +208,4 @@ if __name__ == '__main__':
         if not os.path.exists(upload_folder_name):
             os.makedirs(upload_folder_name)
 
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0")
