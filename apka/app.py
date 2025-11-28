@@ -49,8 +49,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# --- FUNKCJE BEZPIECZEŃSTWA ---
-API_KEY = '2e6b199c6c31f61418cf5d77a74e9f46473e235acce2db9cec86fe7375325205'  # <--- WAŻNE!
+API_KEY = '???????????????????????????????'
 
 
 def check_virus_total(filepath):
@@ -59,22 +58,18 @@ def check_virus_total(filepath):
     Zwraca: (True, komunikat) jeśli bezpieczny/nieznany
     Zwraca: (False, komunikat) jeśli wykryto wirusa
     """
-    # 1. Obliczamy hash pliku (SHA-256) - to taki cyfrowy odcisk palca
     sha256_hash = hashlib.sha256()
     with open(filepath, "rb") as f:
-        # Czytamy plik kawałkami, żeby nie zapchać pamięci
         for byte_block in iter(lambda: f.read(4096), b""):
             sha256_hash.update(byte_block)
     file_hash = sha256_hash.hexdigest()
 
-    # 2. Pytamy VirusTotal o ten hash
     url = f"https://www.virustotal.com/api/v3/files/{file_hash}"
     headers = {"x-apikey": API_KEY}
 
     response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
-        # Plik jest w bazie - sprawdzamy wyniki
         json_response = response.json()
         stats = json_response['data']['attributes']['last_analysis_stats']
         malicious = stats['malicious']
@@ -85,16 +80,12 @@ def check_virus_total(filepath):
             return True, "Plik sprawdzony i czysty."
 
     elif response.status_code == 404:
-        # Pliku nie ma w bazie VirusTotal (jest nowy/unikalny)
-        # Dla bezpieczeństwa można go zablokować, ale my pozwolimy pobrać z ostrzeżeniem
         return True, "Plik nieznany (brak w bazie wirusów). Pobierasz na własne ryzyko."
     else:
         return True, "Błąd połączenia ze skanerem. Pobieranie dopuszczone."
 
 
-# --- TRASY (ROUTES) ---
 
-# Strona główna - widoczna dla wszystkich (LISTA PLIKÓW DO POBRANIA)
 @app.route('/')
 def index():
     files = File.query.all()  # Pobierz wszystkie pliki z bazy
@@ -186,7 +177,7 @@ def download_file(filename):
 
         if not is_safe:
             # Jeśli wirus - wyświetlamy tylko komunikat (flash) i wracamy na główną
-            flash(f'⛔ BLOKADA: {message}', 'error')  # 'error' to kategoria wiadomości
+            flash(f'⛔ BLOKADA: {message}', 'error')
             return redirect(url_for('index'))
         else:
             # Jeśli bezpieczny - wyświetlamy info i pobieramy
@@ -195,14 +186,11 @@ def download_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
-# Tworzenie bazy danych przy starcie (jednorazowo)
-# Tworzenie bazy danych przy starcie (jednorazowo)
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Tworzy plik database.db jeśli nie istnieje
+        db.create_all()
 
-        # --- TU BYŁ BŁĄD - TERAZ JEST POPRAWIONE: ---
-        # Pobieramy nazwę folderu z konfiguracji aplikacji
+
         upload_folder_name = app.config['UPLOAD_FOLDER']
 
         if not os.path.exists(upload_folder_name):
