@@ -56,35 +56,59 @@ API_KEY = os.getenv('VT_API_KEY')
 
 def check_virus_total(filepath):
     """
-    Oblicza hash pliku i sprawdza go w bazie VirusTotal.
-    Zwraca: (True, komunikat) jeśli bezpieczny/nieznany
-    Zwraca: (False, komunikat) jeśli wykryto wirusa
+    Wersja RESTRYKCYJNA: Blokuje pobieranie przy jakimkolwiek błędzie API.
     """
+    # 1. Obliczamy hash pliku
     sha256_hash = hashlib.sha256()
     with open(filepath, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
             sha256_hash.update(byte_block)
     file_hash = sha256_hash.hexdigest()
 
+    # 2. Pytamy VirusTotal
     url = f"https://www.virustotal.com/api/v3/files/{file_hash}"
-    headers = {"x-apikey": API_KEY}
+    # Pobieramy klucz z .env (lub wpisz go tu ręcznie jeśli nie używasz .env)
+    api_key_val = os.getenv('VT_API_KEY')
 
-    response = requests.get(url, headers=headers)
+    if not api_key_val:
+        return False, "BŁĄD KRYTYCZNY: Brak klucza API w konfiguracji serwera!"
 
+    headers = {"x-apikey": api_key_val}
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)  # Timeout 10 sekund
+    except requests.exceptions.RequestException:
+        # Błąd połączenia (brak internetu, awaria DNS itp.)
+        return False, "Błąd połączenia z serwerem antywirusowym. Pobieranie zablokowane dla bezpieczeństwa."
+
+    # 3. Analiza odpowiedzi
     if response.status_code == 200:
+        # Sukces - mamy raport
         json_response = response.json()
         stats = json_response['data']['attributes']['last_analysis_stats']
         malicious = stats['malicious']
 
         if malicious > 0:
-            return False, f"OSTRZEŻENIE: {malicious} silników antywirusowych wykryło zagrożenie!"
+            return False, f"ZAGROŻENIE: Wykryto wirusa przez {malicious} silników!"
         else:
-            return True, "Plik sprawdzony i czysty."
+            return True, "Plik czysty."
 
     elif response.status_code == 404:
-        return True, "Plik nieznany (brak w bazie wirusów). Pobierasz na własne ryzyko."
+        # Plik nieznany (nie ma go w bazie).
+        # Tutaj musisz podjąć decyzję:
+        return False, #"Plik nieznany - blokada bezpieczeństwa."  <-- Opcja super bezpieczna
+
+    elif response.status_code == 401 or response.status_code == 403:
+        # Błąd klucza API (zły klucz lub brak uprawnień)
+        return False, "Błąd autoryzacji API (zły klucz). Pobieranie zablokowane."
+
+    elif response.status_code == 429:
+        # Przekroczono limit zapytań
+        return False, "Serwer przekroczył limit skanowań na minutę/dzień. Spróbuj później."
+
     else:
-        return True, "Błąd połączenia ze skanerem. Pobieranie dopuszczone."
+        # Inne błędy serwera (np. 500)
+        return False, f"Niespodziewany błąd VirusTotal (Kod: {response.status_code})."
 
 
 
@@ -104,15 +128,18 @@ def register():
         # Sprawdź czy użytkownik istnieje
         user = User.query.filter_by(username=username).first()
         if user:
-            return "Użytkownik o takiej nazwie już istnieje!"
+            # --- ZMIANA TUTAJ ---
+            flash('Taki użytkownik już istnieje! Wybierz inną nazwę.', 'error')
+            return redirect(url_for('register'))
 
-        # Stwórz nowego użytkownika (hasło jest szyfrowane!)
         new_user = User(username=username, password=generate_password_hash(password, method='scrypt'))
         db.session.add(new_user)
         db.session.commit()
 
         login_user(new_user)
+        flash('Konto utworzone pomyślnie!', 'success')
         return redirect(url_for('index'))
+
     return render_template('register.html')
 
 
@@ -127,9 +154,14 @@ def login():
 
         if user and check_password_hash(user.password, password):
             login_user(user)
+            flash('Zalogowano pomyślnie!', 'success')  # Opcjonalnie: zielony komunikat po sukcesie
             return redirect(url_for('index'))
         else:
-            return "Błędny login lub hasło"
+            # --- TO JEST ZMIANA ---
+            # Zamiast return "Błąd...", wysyłamy komunikat do systemu...
+            flash('Błędny login lub hasło. Spróbuj ponownie.', 'error')
+            # ...i odświeżamy stronę logowania, żeby go wyświetlić.
+            return redirect(url_for('login'))
 
     return render_template('login.html')
 

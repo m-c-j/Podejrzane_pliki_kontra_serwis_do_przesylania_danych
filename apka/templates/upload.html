@@ -16,7 +16,7 @@
                 </div>
 
                 <div class="d-grid gap-2">
-                    <button id="submitBtn" type="submit" class="btn btn-success btn-lg">🚀 Wyślij plik na serwer</button>
+                    <button id="submitBtn" type="submit" class="btn btn-success btn-lg">Wyślij plik na serwer</button>
                     <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Anuluj</a>
                 </div>
             </form>
@@ -24,43 +24,6 @@
     </div>
 </div>
 
-<script>
-    // 1. Lista dozwolonych rozszerzeń (musi być taka sama jak w Pythonie!)
-    const allowedExtensions = ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'zip', 'rar', '7z'];
+<script src="{{ url_for('static', filename='validation.js') }}"></script>
 
-    // 2. Pobieramy elementy ze strony
-    const fileInput = document.getElementById('fileInput');
-    const errorDiv = document.getElementById('fileError');
-    const submitBtn = document.getElementById('submitBtn');
-
-    // 3. Nasłuchujemy zmiany (kiedy użytkownik wybierze plik)
-    fileInput.addEventListener('change', function() {
-        const filePath = this.value;
-
-        // Jeśli nic nie wybrano (np. anulowano), przerywamy
-        if (!filePath) return;
-
-        // Wyciągamy rozszerzenie (to co po ostatniej kropce)
-        const extension = filePath.split('.').pop().toLowerCase();
-
-        // Sprawdzamy czy jest na liście
-        if (allowedExtensions.includes(extension)) {
-            // JEST OK: Ukryj błąd, włącz przycisk
-            errorDiv.style.display = 'none';
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('btn-secondary');
-            submitBtn.classList.add('btn-success');
-            submitBtn.innerText = "Wyślij plik na serwer";
-        } else {
-            // JEST ŹLE: Pokaż błąd, zablokuj przycisk
-            errorDiv.style.display = 'block';
-            errorDiv.innerText = `❌ Niepoprawny format pliku (.${extension})! Wybierz inny.`;
-
-            submitBtn.disabled = true; // Blokuje klikanie
-            submitBtn.classList.remove('btn-success');
-            submitBtn.classList.add('btn-secondary'); // Szary kolor
-            submitBtn.innerText = "⛔ Zły format pliku";
-        }
-    });
-</script>
 {% endblock %}
