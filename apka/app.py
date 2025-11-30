@@ -6,7 +6,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import hashlib
 import requests
+from dotenv import load_dotenv
 
+load_dotenv()
 app = Flask(__name__)
 
 # --- KONFIGURACJA ---
@@ -49,7 +51,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-API_KEY = '???????????????????????????????'
+API_KEY = os.getenv('VT_API_KEY')
 
 
 def check_virus_total(filepath):
