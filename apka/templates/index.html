@@ -30,10 +30,10 @@
                                         <label class="form-check-label small text-muted" for="safeSwitch{{ loop.index }}">🛡️ Skanuj</label>
                                     </div>
 
-                                    <button type="submit" class="btn btn-success btn-sm">Pobierz</button>
+                                    <button type="submit" class="btn btn-success btn-sm">⬇ Pobierz</button>
                                 </form>
                             </td>
-                            </tr>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -44,4 +44,7 @@
         </div>
     </div>
 </div>
+
+<script src="{{ url_for('static', filename='download_handler.js') }}"></script>
+
 {% endblock %}

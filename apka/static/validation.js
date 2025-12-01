@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
 
     // 1. Lista dozwolonych rozszerzeń (musi być zgodna z Pythonem)
-    const allowedExtensions = ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'zip', 'rar', '7z'];
+    const allowedExtensions = ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'zip', 'rar', '7z', 'exe'];
 
     // 2. Pobieramy elementy ze strony
     const fileInput = document.getElementById('fileInput');

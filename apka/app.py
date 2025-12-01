@@ -7,6 +7,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 import hashlib
 import requests
 from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash, jsonify
 
 load_dotenv()
 app = Flask(__name__)
@@ -15,7 +16,11 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'bardzo-tajny-klucz-zmien-go-w-produkcji'  # Potrzebne do sesji logowania
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'  # Baza danych w pliku
 app.config['UPLOAD_FOLDER'] = 'uploads'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'zip', 'rar', '7z'}
+
+# LIMIT: Maksymalnie 32 MB (32 * 1024 * 1024 bajtów)
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
+
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'zip', 'rar', '7z', 'exe'}
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -56,61 +61,71 @@ API_KEY = os.getenv('VT_API_KEY')
 
 def check_virus_total(filepath):
     """
-    Wersja RESTRYKCYJNA: Blokuje pobieranie przy jakimkolwiek błędzie API.
+    Statusy: 'SAFE', 'DANGER', 'ERROR', 'QUEUED', 'TOO_LARGE'
     """
-    # 1. Obliczamy hash pliku
+    api_key_val = os.getenv('VT_API_KEY')
+    if not api_key_val:
+        return 'ERROR', "Brak klucza API."
+
+    # --- NOWE ZABEZPIECZENIE: Sprawdź rozmiar pliku ---
+    file_size_mb = os.path.getsize(filepath) / (1024 * 1024)  # Rozmiar w MB
+    if file_size_mb > 32:
+        return 'TOO_LARGE', f"Plik ma {file_size_mb:.1f}MB. Limit skanowania to 32MB."
+
+    # 1. Obliczamy hash
     sha256_hash = hashlib.sha256()
     with open(filepath, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(byte_block)
+        file_content = f.read()
+        sha256_hash.update(file_content)
     file_hash = sha256_hash.hexdigest()
 
-    # 2. Pytamy VirusTotal
-    url = f"https://www.virustotal.com/api/v3/files/{file_hash}"
-    # Pobieramy klucz z .env (lub wpisz go tu ręcznie jeśli nie używasz .env)
-    api_key_val = os.getenv('VT_API_KEY')
-
-    if not api_key_val:
-        return False, "BŁĄD KRYTYCZNY: Brak klucza API w konfiguracji serwera!"
-
+    # 2. Sprawdzamy w bazie (GET)
+    url_check = f"https://www.virustotal.com/api/v3/files/{file_hash}"
     headers = {"x-apikey": api_key_val}
 
     try:
-        response = requests.get(url, headers=headers, timeout=10)  # Timeout 10 sekund
+        response = requests.get(url_check, headers=headers, timeout=10)
     except requests.exceptions.RequestException:
-        # Błąd połączenia (brak internetu, awaria DNS itp.)
-        return False, "Błąd połączenia z serwerem antywirusowym. Pobieranie zablokowane dla bezpieczeństwa."
+        return 'ERROR', "Błąd połączenia z serwerem antywirusowym."
 
-    # 3. Analiza odpowiedzi
     if response.status_code == 200:
-        # Sukces - mamy raport
-        json_response = response.json()
-        stats = json_response['data']['attributes']['last_analysis_stats']
+        stats = response.json()['data']['attributes']['last_analysis_stats']
         malicious = stats['malicious']
-
         if malicious > 0:
-            return False, f"ZAGROŻENIE: Wykryto wirusa przez {malicious} silników!"
+            return 'DANGER', f"ZAGROŻENIE: Wykryto wirusa ({malicious} silników)!"
         else:
-            return True, "Plik czysty."
+            return 'SAFE', "Plik czysty (znaleziony w bazie)."
 
     elif response.status_code == 404:
-        # Plik nieznany (nie ma go w bazie).
-        # Tutaj musisz podjąć decyzję:
-        return False, #"Plik nieznany - blokada bezpieczeństwa."  <-- Opcja super bezpieczna
+        # Próba wysłania (POST)
+        files = {'file': (os.path.basename(filepath), file_content)}
+        url_upload = "https://www.virustotal.com/api/v3/files"
 
-    elif response.status_code == 401 or response.status_code == 403:
-        # Błąd klucza API (zły klucz lub brak uprawnień)
-        return False, "Błąd autoryzacji API (zły klucz). Pobieranie zablokowane."
+        try:
+            upload_response = requests.post(url_upload, headers=headers, files=files)
 
+            if upload_response.status_code == 200:
+                return 'QUEUED', "Plik nieznany. Wysłano do analizy. Spróbuj za chwilę."
+            elif upload_response.status_code == 413:  # Błąd API "Za duży"
+                return 'TOO_LARGE', "Plik jest zbyt duży dla darmowego skanera antywirusowego."
+            else:
+                return 'ERROR', f"Błąd wysyłania (Kod: {upload_response.status_code})."
+        except Exception as e:
+            return 'ERROR', f"Błąd: {str(e)}"
+
+    elif response.status_code == 401:
+        return 'ERROR', "Zły klucz API."
     elif response.status_code == 429:
-        # Przekroczono limit zapytań
-        return False, "Serwer przekroczył limit skanowań na minutę/dzień. Spróbuj później."
-
+        return 'ERROR', "Przekroczono limit zapytań."
     else:
-        # Inne błędy serwera (np. 500)
-        return False, f"Niespodziewany błąd VirusTotal (Kod: {response.status_code})."
+        return 'ERROR', f"Niespodziewany błąd (Kod: {response.status_code})."
 
 
+# Obsługa błędu "Za duży plik"
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    flash('Plik jest zbyt duży! Maksymalny rozmiar to 32MB.', 'error')
+    return redirect(request.url), 413
 
 @app.route('/')
 def index():
@@ -201,24 +216,59 @@ def upload_file():
 # Pobieranie plików (Dla każdego)
 @app.route('/uploads/<filename>')
 def download_file(filename):
-    # Sprawdzamy, czy użytkownik zaznaczył suwak (parametr w linku ?safe=on)
     safe_mode = request.args.get('safe')
+    confirm = request.args.get('confirm')
 
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
     if safe_mode == 'on':
-        is_safe, message = check_virus_total(file_path)
+        status, message = check_virus_total(file_path)
 
-        if not is_safe:
-            # Jeśli wirus - wyświetlamy tylko komunikat (flash) i wracamy na główną
+        # 1. WIRUS LUB BŁĄD
+        if status == 'DANGER' or status == 'ERROR':
             flash(f'⛔ BLOKADA: {message}', 'error')
             return redirect(url_for('index'))
-        else:
-            # Jeśli bezpieczny - wyświetlamy info i pobieramy
-            flash(f'✅ {message}', 'success')
 
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+        # 2. TRWA SKANOWANIE (Nowy status)
+        if status == 'QUEUED':
+            # Wyświetlamy żółty komunikat i blokujemy pobieranie
+            flash(f'⏳ {message} Spróbuj pobrać ponownie za 2-3 minuty.', 'warning')
+            return redirect(url_for('index'))
 
+        # 3. PLIK CZYSTY
+        if status == 'SAFE':
+            pass
+
+
+        if status == 'TOO_LARGE':
+            if confirm != 'yes':
+                flash(f'⚠️ {message}', 'warning')
+                # Dodajemy zmienną 'reason' (powód)
+                return render_template('confirm_download.html', filename=filename, reason=message)
+
+            flash(f'⚠️ Pobrałeś duży plik bez skanowania: {message}', 'warning')
+
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+
+
+# --- NOWA TRASA API DLA JAVASCRIPTU ---
+@app.route('/api/check_file/<filename>')
+def check_file_api(filename):
+    """
+    Sprawdza bezpieczeństwo i zwraca JSON zamiast HTML.
+    Używane przez JavaScript do wyświetlania komunikatów bez odświeżania.
+    """
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    # Używamy tej samej logiki co wcześniej
+    status, message = check_virus_total(file_path)
+
+    # Zwracamy czyste dane
+    return jsonify({
+        'status': status,
+        'message': message,
+        'filename': filename
+    })
 
 if __name__ == '__main__':
     with app.app_context():

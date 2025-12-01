@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-warning mb-3 shadow">
+            <div class="card-header bg-warning text-dark fw-bold">
+                 ⚠️ Ostrzeżenie bezpieczeństwa
+            </div>
+            <div class="card-body text-center p-5">
+                <h4 class="card-title mb-4">Wymagane potwierdzenie</h4>
+
+                <p class="card-text fs-5">
+                    {{ reason if reason else "System antywirusowy nie posiada informacji o tym pliku. Oznacza to, że plik jest nowy lub mało popularny." }}
+                </p>
+
+                <p class="text-muted">Dotyczy pliku: <strong>{{ filename }}</strong></p>
+
+                <p class="fw-bold mt-4">Czy nadal chcesz go pobrać?</p>
+                
+                <div class="d-flex justify-content-center gap-3 mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Anuluj</a>
+
+                    <a href="{{ url_for('download_file', filename=filename, safe='on', confirm='yes') }}" class="btn btn-danger">
+                        Tak, pobierz na własne ryzyko
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
