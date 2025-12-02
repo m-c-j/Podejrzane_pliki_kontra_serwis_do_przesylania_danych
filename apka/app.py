@@ -13,7 +13,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # --- KONFIGURACJA ---
-app.config['SECRET_KEY'] = 'bardzo-tajny-klucz-zmien-go-w-produkcji'  # Potrzebne do sesji logowania
+app.config['SECRET_KEY'] = 'bardzo-tajny-klucz-serio-tajne'  # Potrzebne do sesji logowania
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'  # Baza danych w pliku
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
@@ -25,10 +25,8 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'zip', 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'  # Gdzie przekierować, jak ktoś nie jest zalogowany
+login_manager.login_view = 'login'
 
-
-# --- BAZA DANYCH (MODELE) ---
 
 # Tabela Użytkowników
 class User(UserMixin, db.Model):
@@ -67,7 +65,6 @@ def check_virus_total(filepath):
     if not api_key_val:
         return 'ERROR', "Brak klucza API."
 
-    # --- NOWE ZABEZPIECZENIE: Sprawdź rozmiar pliku ---
     file_size_mb = os.path.getsize(filepath) / (1024 * 1024)  # Rozmiar w MB
     if file_size_mb > 32:
         return 'TOO_LARGE', f"Plik ma {file_size_mb:.1f}MB. Limit skanowania to 32MB."
@@ -129,7 +126,7 @@ def request_entity_too_large(error):
 
 @app.route('/')
 def index():
-    files = File.query.all()  # Pobierz wszystkie pliki z bazy
+    files = File.query.all()
     return render_template('index.html', files=files)
 
 
@@ -140,10 +137,8 @@ def register():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Sprawdź czy użytkownik istnieje
         user = User.query.filter_by(username=username).first()
         if user:
-            # --- ZMIANA TUTAJ ---
             flash('Taki użytkownik już istnieje! Wybierz inną nazwę.', 'error')
             return redirect(url_for('register'))
 
@@ -172,10 +167,7 @@ def login():
             flash('Zalogowano pomyślnie!', 'success')  # Opcjonalnie: zielony komunikat po sukcesie
             return redirect(url_for('index'))
         else:
-            # --- TO JEST ZMIANA ---
-            # Zamiast return "Błąd...", wysyłamy komunikat do systemu...
             flash('Błędny login lub hasło. Spróbuj ponownie.', 'error')
-            # ...i odświeżamy stronę logowania, żeby go wyświetlić.
             return redirect(url_for('login'))
 
     return render_template('login.html')
@@ -231,7 +223,6 @@ def download_file(filename):
 
         # 2. TRWA SKANOWANIE (Nowy status)
         if status == 'QUEUED':
-            # Wyświetlamy żółty komunikat i blokujemy pobieranie
             flash(f'⏳ {message} Spróbuj pobrać ponownie za 2-3 minuty.', 'warning')
             return redirect(url_for('index'))
 
@@ -260,10 +251,8 @@ def check_file_api(filename):
     """
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-    # Używamy tej samej logiki co wcześniej
     status, message = check_virus_total(file_path)
 
-    # Zwracamy czyste dane
     return jsonify({
         'status': status,
         'message': message,
