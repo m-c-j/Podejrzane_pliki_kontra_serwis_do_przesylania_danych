@@ -9,9 +9,9 @@ W ramach zadań tworzony jest symulowany podejrzany plik (wygenerowany za pomoc�
 
 ## Zadanie 1
 1. Uruchom maszyny wirtualne
-2. Wyłącz windows defender - Windows Security -> Virus & threat protection -> Manage settings -> Wszystko powyłączaj
-3. Uruchom serwer -> Wejdź do folderu C:\Users\serwer\Desktop\serwer\app i uruchom aplikację poleceniem python app.py
-4. Na kali Linuxie sprawdź czy aplikacja się otwiera (w przeglądarce internetowej wejdź na stronę 192.168.1.1:5000
+2. Wyłącz windows defender - Windows Security -> Virus & threat protection -> Manage settings -> Wyłącz wszystkie opcje
+3. Uruchom serwer - Wejdź do folderu C:\Users\serwer\Desktop\serwer\app i uruchom aplikację poleceniem python app.py
+4. Na kali Linuxie sprawdź łączność z serwerem (polecenie ping) i sprawdź, czy strona internetowa uruchamia się poprawnie wpisując jej adres w przeglądarce internetowej
 5. Załóż konto
 
 6. Tworzenie zainfekowanego pliku:
@@ -23,12 +23,12 @@ W ramach zadań tworzony jest symulowany podejrzany plik (wygenerowany za pomoc�
 - Wpisz adres IP karty sieciowe na kali Linuxie
 - Wybierz dowolny nieużywany port do nasłuchiwania
 - Kiedy plik zostanie utworzony utwórz listener (yes)
-- Kiedy listener zostanie utworzony (pojawi się linijka Started reverse handler) prześlij plik payload.exe na serwer
+- Kiedy listener zostanie utworzony (pojawi się linijka Started reverse handler) prześlij utworzony plik payload.exe na serwer
 
 7. Na windowsie sprawdź czy plik znajduje się w katalogu uploads
 8. Na windowsie wejdź na stronę internetową serwisu i pobierz plik (wybierz opcję keep)
 9. Uruchom plik, kliknij w wyskakujące powiadomienie od windows defendera, wybierz opcję allow on device i zaakceptuj
-10. Na kali Linuxie powinny pojawić się informacje o nawiązanym połączeniu. Wpisz komendę sessions aby sprawdzić informacje o sesjach
+10. Na kali Linuxie powinna pojawić się informacja o nawiązanym połączeniu. Wpisz komendę sessions aby sprawdzić informacje o sesjach
 11. Połącz się z sesją poleceniem sessions -i [id sesji] --timeout 9999
 12. Połączenie powinno być nawiązane i konsola na kalim powinna znajdować się w katalogu, w którym został zapisany plik na windowsie
 
@@ -99,3 +99,7 @@ ipconfig
 5. Wklej do pliku swój klucz w formacie VT_API_KEY=klucz
 6. Przed pobraniem zainfekowanego pliku włącz sprawdzanie bezpieczeństwa pliku w aplikacji (emoji tarczy)
 7. Obserwuj czy plik zostanie oznaczony jako niebezpieczny
+8. Prześlij na serwer bezpieczny plik, np. własny plik txt. Sprawdź, czy virustotal poprawnie go zweryfikuje
+9. Możesz również przetestować na innym zainfekowanym pliku. Na przykład - stwórz inny plik korzystając z setoolkit (pobaw się różnymi opcjami) lub pobierz z internetu (przykład - eicar)
+
+Po zakończeniu pracy usuń wszystkie pobrane obrazy oraz utworzone maszyny wirtualne (zaznacz opcję )
