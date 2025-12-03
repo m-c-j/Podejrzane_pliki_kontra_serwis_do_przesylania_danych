@@ -8,7 +8,7 @@ Celem projektu jest zrozumienie, w jaki sposób serwisy do przesyłania danych m
 W ramach zadań tworzony jest symulowany podejrzany plik (wygenerowany za pomocą narzędzia Social Engineering Toolkit), który następnie trafia na prosty serwer napisany w Pythonie. Wszelkie zadania należy wykonywać w odizolowanym środowisku na maszynie wirtualnej. 
 
 ## Zadanie 1
-1. Uruchom maszyny wirtualne
+1. Uruchom maszyny wirtualne (hasła są takie same co nazwy użytkowników)
 2. Wyłącz windows defender - Windows Security -> Virus & threat protection -> Manage settings -> Wyłącz wszystkie opcje
 3. Uruchom serwer - Wejdź do folderu C:\Users\serwer\Desktop\serwer\app i uruchom aplikację poleceniem python app.py
 4. Na kali Linuxie sprawdź łączność z serwerem (polecenie ping) i sprawdź, czy strona internetowa uruchamia się poprawnie wpisując jej adres w przeglądarce internetowej
@@ -89,7 +89,9 @@ systeminfo
 ipconfig
 </details>
 
-3. Zakończ sesję poleceniem exit
+- Spróbuj inne dostępne polecenia. Zobacz, jakie można wykonać, a jakie są blokowane
+
+4. Zakończ sesję poleceniem exit
 
 ## Zadanie 3
 1. Zarejestruj się na https://www.virustotal.com/gui/sign-in
@@ -102,4 +104,4 @@ ipconfig
 8. Prześlij na serwer bezpieczny plik, np. własny plik txt. Sprawdź, czy virustotal poprawnie go zweryfikuje
 9. Możesz również przetestować na innym zainfekowanym pliku. Na przykład - stwórz inny plik korzystając z setoolkit (pobaw się różnymi opcjami) lub pobierz z internetu (przykład - eicar)
 
-Po zakończeniu pracy usuń wszystkie pobrane obrazy oraz utworzone maszyny wirtualne (zaznacz opcję )
+Po zakończeniu pracy usuń wszystkie pobrane obrazy oraz utworzone maszyny wirtualne (w vbox zaznacz opcję "Delete the virtual machine files and virtual hard disks)
